@@ -1,0 +1,4 @@
+# Receiver Flowgraph (Paste into .grc file)
+- NESDR Source -> WFM Demodulator -> Low-Pass Filter (0–15 kHz) -> Audio Output
+- Bandpass Filter (60–80 kHz) -> Amplifier -> FBMC-OQAM Demodulator -> SCCC Decoder
+- Content Detector -> Audio Decoder/Data Display -> Combiner -> Speaker/File Sink

@@ -1,0 +1,40 @@
+import numpy as np
+import pynmea2
+from pyrtlsdr import RtlSdr
+import flask
+from flask import render_template
+import pyobjc  # For macOS GUI integration
+
+app = flask.Flask(__name__)
+
+# SDR Setup
+sdr = RtlSdr()
+sdr.sample_rate = 2.048e6  # 2.048 MS/s
+sdr.center_freq = 94.1e6   # WLLD FM
+sdr.gain = 'auto'
+
+# GPS Simulation (replace with real NMEA data)
+def get_gps_data():
+    return pynmea2.parse("$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47")
+
+# Heat Map Data Collection
+heat_map = np.zeros((100, 100))  # 100x100 grid
+def collect_data():
+    samples = sdr.read_samples(256*1024)
+    power = np.abs(np.fft.fft(samples))**2
+    freq_bins = np.fft.fftfreq(len(power), 1/sdr.sample_rate)
+    signal_power = np.mean(power[(freq_bins > -100e3) & (freq_bins < 100e3)])
+    gps = get_gps_data()
+    lat_idx = int((gps.latitude - 48) * 10)  # Simplified mapping
+    lon_idx = int((gps.longitude - 11) * 10)
+    if 0 <= lat_idx < 100 and 0 <= lon_idx < 100:
+        heat_map[lat_idx, lon_idx] += signal_power
+    return signal_power
+
+@app.route('/')
+def index():
+    power = collect_data()
+    return render_template('index.html', power=power)
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
